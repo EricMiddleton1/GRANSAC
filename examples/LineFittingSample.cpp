@@ -25,7 +25,7 @@ void DrawFullLine(cv::Mat& img, cv::Point a, cv::Point b, cv::Scalar color, int 
 
 int main(int argc, char * argv[])
 {
-	if (argc != 1 && argc != 3)
+	if (argc != 1 && argc != 2 && argc != 3)
 	{
 		std::cout << "[ USAGE ]: " << argv[0] << " [<Image Size> = 1000] [<nPoints> = 500]" << std::endl;
 		return -1;
@@ -33,7 +33,11 @@ int main(int argc, char * argv[])
 
 	int Side = 1000;
 	int nPoints = 500;
-	if (argc == 3)
+	bool noshow = false;
+	if(argc == 2 && std::string(argv[1]) == "--noshow") {
+		noshow = true;
+	}
+	else if (argc == 3)
 	{
 		Side = std::atoi(argv[1]);
 		nPoints = std::atoi(argv[2]);
@@ -67,6 +71,10 @@ int main(int argc, char * argv[])
 	Estimator.Estimate(CandPoints);
 	int end = cv::getTickCount();
 	std::cout << "RANSAC took: " << GRANSAC::VPFloat(end - start) / GRANSAC::VPFloat(cv::getTickFrequency()) * 1000.0 << " ms." << std::endl;
+
+	if(noshow) {
+		return 0;
+	}
 
 	auto BestInliers = Estimator.GetBestInliers();
 	if (BestInliers.size() > 0)
