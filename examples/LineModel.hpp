@@ -1,24 +1,23 @@
 #pragma once
 
-#include "AbstractModel.hpp"
+#include "GRANSAC.hpp"
 
 typedef std::array<GRANSAC::VPFloat, 2> Vector2VP;
 
 class Point2D
-    : public GRANSAC::AbstractParameter
 {
 public:
     Point2D(GRANSAC::VPFloat x, GRANSAC::VPFloat y)
     {
-	m_Point2D[0] = x;
-	m_Point2D[1] = y;
+	    m_Point2D[0] = x;
+	    m_Point2D[1] = y;
     };
 
     Vector2VP m_Point2D;
 };
 
+
 class Line2DModel
-    : public GRANSAC::AbstractModel<2>
 {
 protected:
     // Parametric form
@@ -29,15 +28,11 @@ protected:
     GRANSAC::VPFloat m_m; // Slope
     GRANSAC::VPFloat m_d; // Intercept
 
-    virtual GRANSAC::VPFloat ComputeDistanceMeasure(std::shared_ptr<GRANSAC::AbstractParameter> Param) override
+    virtual GRANSAC::VPFloat ComputeDistanceMeasure(const Param& ExtPoint2D) override
     {
-	auto ExtPoint2D = std::dynamic_pointer_cast<Point2D>(Param);
-	if(ExtPoint2D == nullptr)
-	    throw std::runtime_error("Line2DModel::ComputeDistanceMeasure() - Passed parameter are not of type Point2D.");
-
 	// Return distance between passed "point" and this line
 	// http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
-	GRANSAC::VPFloat Numer = fabs(m_a * ExtPoint2D->m_Point2D[0] + m_b * ExtPoint2D->m_Point2D[1] + m_c);
+	GRANSAC::VPFloat Numer = fabs(m_a * ExtPoint2D.m_Point2D[0] + m_b * ExtPoint2D.m_Point2D[1] + m_c);
 	GRANSAC::VPFloat Dist = Numer / m_DistDenominator;
 
 	// // Debug
@@ -49,27 +44,21 @@ protected:
     };
 
 public:
-    Line2DModel(const std::vector<std::shared_ptr<GRANSAC::AbstractParameter>> &InputParams)
+  using Param = Point2D;
+  static const int ParamCount = 2;
+
+    Line2DModel(const std::array<Param, ParamCount> &InputParams)
     {
 	Initialize(InputParams);
     };
 
-    virtual void Initialize(const std::vector<std::shared_ptr<GRANSAC::AbstractParameter>> &InputParams) override
+    void Initialize(const std::array<Param, ParamCount> &InputParams)
     {
-	if(InputParams.size() != 2)
-	    throw std::runtime_error("Line2DModel - Number of input parameters does not match minimum number required for this model.");
-
-	// Check for AbstractParamter types
-	auto Point1 = std::dynamic_pointer_cast<Point2D>(InputParams[0]);
-	auto Point2 = std::dynamic_pointer_cast<Point2D>(InputParams[1]);
-	if(Point1 == nullptr || Point2 == nullptr)
-	    throw std::runtime_error("Line2DModel - InputParams type mismatch. It is not a Point2D.");
-
-	std::copy(InputParams.begin(), InputParams.end(), m_MinModelParams.begin());
-
+      auto& Point1 = InputParams[0];
+      auto& Point2 = InputParams[1];
 	// Compute the line parameters
-	m_m = (Point2->m_Point2D[1] - Point1->m_Point2D[1]) / (Point2->m_Point2D[0] - Point1->m_Point2D[0]); // Slope
-	m_d = Point1->m_Point2D[1] - m_m * Point1->m_Point2D[0]; // Intercept
+	m_m = (Point1.m_Point2D[1] - Point1.m_Point2D[1]) / (Point2.m_Point2D[0] - Point1.m_Point2D[0]); // Slope
+	m_d = Point1.m_Point2D[1] - m_m * Point1.m_Point2D[0]; // Intercept
 	// m_d = Point2->m_Point2D[1] - m_m * Point2->m_Point2D[0]; // Intercept - alternative should be the same as above
 
 	// mx - y + d = 0
@@ -80,17 +69,17 @@ public:
 	m_DistDenominator = sqrt(m_a * m_a + m_b * m_b); // Cache square root for efficiency
     };
 
-    virtual std::pair<GRANSAC::VPFloat, std::vector<std::shared_ptr<GRANSAC::AbstractParameter>>> Evaluate(const std::vector<std::shared_ptr<GRANSAC::AbstractParameter>> &EvaluateParams, GRANSAC::VPFloat Threshold)
+    std::pair<GRANSAC::VPFloat, std::vector<Param>> Evaluate(const std::vector<Param> &EvaluateParams, GRANSAC::VPFloat Threshold)
     {
-	std::vector<std::shared_ptr<GRANSAC::AbstractParameter>> Inliers;
+	std::vector<Param> Inliers;
 	int nTotalParams = EvaluateParams.size();
 	int nInliers = 0;
 
-	for(auto& Param : EvaluateParams)
+	for(auto& p : EvaluateParams)
 	{
-	    if(ComputeDistanceMeasure(Param) < Threshold)
+	    if(ComputeDistanceMeasure(p) < Threshold)
 	    {
-		Inliers.push_back(Param);
+		Inliers.push_back(p);
 		nInliers++;
 	    }
 	}

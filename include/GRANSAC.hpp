@@ -4,25 +4,22 @@
 #include <cmath>
 #include <string>
 #include <random>
-#include <memory>
 #include <algorithm>
 #include <vector>
 #include <omp.h>
 
-#include "AbstractModel.hpp"
-
 namespace GRANSAC
 {
-	// T - AbstractModel
-	template <class T, int t_NumParams>
+  using VPFloat = double;
+
+	// T - Model
+	template <class T>
 	class RANSAC
 	{
 	private:
-		std::vector<std::shared_ptr<AbstractParameter>> m_Data; // All the data
-
-		std::vector<std::shared_ptr<T>> m_SampledModels; // Vector of all sampled models
-		std::shared_ptr<T> m_BestModel; // Pointer to the best model, valid only after Estimate() is called
-		std::vector<std::shared_ptr<AbstractParameter>> m_BestInliers;
+		std::vector<T> m_SampledModels; // Vector of all sampled models
+		T m_BestModel; // Pointer to the best model, valid only after Estimate() is called
+		std::vector<T::Param> m_BestInliers;
 
 		int m_MaxIterations; // Number of iterations before termination
 		VPFloat m_Threshold; // The threshold for computing model consensus
@@ -45,12 +42,11 @@ namespace GRANSAC
 			Reset();
 		};
 
-		virtual ~RANSAC(void) {};
+		~RANSAC(void) {};
 
 		void Reset(void)
 		{
 			// Clear sampled models, etc. and prepare for next call. Reset RANSAC estimator state
-			m_Data.clear();
 			m_SampledModels.clear();
 
 			m_BestModelIdx = -1;
@@ -63,10 +59,10 @@ namespace GRANSAC
 			m_MaxIterations = MaxIterations;
 		};
 
-		std::shared_ptr<T> GetBestModel(void) { return m_BestModel; };
-		const std::vector<std::shared_ptr<AbstractParameter>>& GetBestInliers(void) { return m_BestInliers; };
+		T& GetBestModel(void) { return m_BestModel; };
+		const std::vector<T::Param>& GetBestInliers(void) { return m_BestInliers; };
 
-		bool Estimate(const std::vector<std::shared_ptr<AbstractParameter>> &Data)
+		bool Estimate(const std::vector<T::Param>& Data)
 		{
 			if (Data.size() <= t_NumParams)
 			{
@@ -74,12 +70,11 @@ namespace GRANSAC
 				return false;
 			}
 
-			m_Data = Data;
-			int DataSize = m_Data.size();
+			int DataSize = Data.size();
 			std::uniform_int_distribution<int> UniDist(0, int(DataSize - 1)); // Both inclusive
 
 			std::vector<VPFloat> InlierFractionAccum(m_MaxIterations);
-			std::vector<std::vector<std::shared_ptr<AbstractParameter>>> InliersAccum(m_MaxIterations);
+			std::vector<std::vector<T::Param>> InliersAccum(m_MaxIterations);
 			m_SampledModels.resize(m_MaxIterations);
 
 			int nThreads = std::max(1, omp_get_max_threads());
@@ -89,17 +84,17 @@ namespace GRANSAC
 			for (int i = 0; i < m_MaxIterations; ++i)
 			{
 				// Select t_NumParams random samples
-				std::vector<std::shared_ptr<AbstractParameter>> RandomSamples(t_NumParams);
-				std::vector<std::shared_ptr<AbstractParameter>> RemainderSamples = m_Data; // Without the chosen random samples
+				std::vector<T::Param> RandomSamples(t_NumParams);
+				std::vector<T::Param> RemainderSamples = Data; // Without the chosen random samples
 
 				std::shuffle(RemainderSamples.begin(), RemainderSamples.end(), m_RandEngines[omp_get_thread_num()]); // To avoid picking the same element more than once
 				std::copy(RemainderSamples.begin(), RemainderSamples.begin() + t_NumParams, RandomSamples.begin());
 				RemainderSamples.erase(RemainderSamples.begin(), RemainderSamples.begin() + t_NumParams);
 
-				std::shared_ptr<T> RandomModel = std::make_shared<T>(RandomSamples);
+				T RandomModel = T(RandomSamples);
 
 				// Check if the sampled model is the best so far
-				std::pair<VPFloat, std::vector<std::shared_ptr<AbstractParameter>>> EvalPair = RandomModel->Evaluate(RemainderSamples, m_Threshold);
+				std::pair<VPFloat, std::vector<T::Param>> EvalPair = RandomModel->Evaluate(RemainderSamples, m_Threshold);
 				InlierFractionAccum[i] = EvalPair.first;
 				InliersAccum[i] = EvalPair.second;
 
@@ -117,8 +112,6 @@ namespace GRANSAC
 					m_BestInliers = InliersAccum[i];
 				}
 			}
-
-			// std::cerr << "BestInlierFraction: " << m_BestModelScore << std::endl;
 
 			Reset();
 
