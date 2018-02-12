@@ -33,7 +33,7 @@ namespace GRANSAC
 			:	m_BestModel{nullptr}
 		{
 			int nThreads = std::max(1, omp_get_max_threads());
-			std::cout << "[ INFO ]: Maximum usable threads: " << nThreads << std::endl;
+			//std::cout << "[ INFO ]: Maximum usable threads: " << nThreads << std::endl;
 			for (int i = 0; i < nThreads; ++i)
 			{
 				std::random_device SeedDevice;
