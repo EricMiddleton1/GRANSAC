@@ -86,10 +86,10 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	auto& BestLine = Estimator.GetBestModel();
+	auto* BestLine = Estimator.GetBestModel();
 	
-	auto BestLinePt1 = BestLine.GetModelParams<0>();
-	auto BestLinePt2 = BestLine.GetModelParams<1>();
+	auto BestLinePt1 = BestLine->GetModelParams<0>();
+	auto BestLinePt2 = BestLine->GetModelParams<1>();
 	
 	cv::Point Pt1(BestLinePt1->m_Point2D[0], BestLinePt1->m_Point2D[1]);
 	cv::Point Pt2(BestLinePt2->m_Point2D[0], BestLinePt2->m_Point2D[1]);

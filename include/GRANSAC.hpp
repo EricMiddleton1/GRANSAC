@@ -59,7 +59,7 @@ namespace GRANSAC
 			m_MaxIterations = MaxIterations;
 		};
 
-		T& GetBestModel(void) { return *m_BestModel; };
+		T* GetBestModel(void) { return m_BestModel; };
 		const std::vector<typename T::Param*>& GetBestInliers(void) { return m_BestInliers; };
 
 		bool Estimate(const std::vector<typename T::Param>& Data)
