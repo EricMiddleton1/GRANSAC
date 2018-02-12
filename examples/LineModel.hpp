@@ -23,20 +23,22 @@ class Line2DModel
 public:
   using Param = Point2D;
   static const int ParamCount = 2;
+		
+		Line2DModel() {}
 
-    Line2DModel(const std::array<Param, ParamCount> &InputParams)
+    Line2DModel(const std::array<Param*, ParamCount> &InputParams)
     {
 	Initialize(InputParams);
     };
 
-    void Initialize(const std::array<Param, ParamCount> &InputParams)
+    void Initialize(const std::array<Param*, ParamCount> &InputParams)
     {
       std::copy(InputParams.begin(), InputParams.end(), m_parameters.begin());
 
-      auto& Point1 = InputParams[0];
-      auto& Point2 = InputParams[1];
+      auto& Point1 = *InputParams[0];
+      auto& Point2 = *InputParams[1];
 	// Compute the line parameters
-	m_m = (Point1.m_Point2D[1] - Point1.m_Point2D[1]) / (Point2.m_Point2D[0] - Point1.m_Point2D[0]); // Slope
+	m_m = (Point2.m_Point2D[1] - Point1.m_Point2D[1]) / (Point2.m_Point2D[0] - Point1.m_Point2D[0]); // Slope
 	m_d = Point1.m_Point2D[1] - m_m * Point1.m_Point2D[0]; // Intercept
 	// m_d = Point2->m_Point2D[1] - m_m * Point2->m_Point2D[0]; // Intercept - alternative should be the same as above
 
@@ -48,9 +50,9 @@ public:
 	m_DistDenominator = sqrt(m_a * m_a + m_b * m_b); // Cache square root for efficiency
     };
 
-    std::pair<GRANSAC::VPFloat, std::vector<Param>> Evaluate(const std::vector<Param> &EvaluateParams, GRANSAC::VPFloat Threshold)
+    std::pair<GRANSAC::VPFloat, std::vector<Param*>> Evaluate(const std::vector<Param*> &EvaluateParams, GRANSAC::VPFloat Threshold)
     {
-	std::vector<Param> Inliers;
+	std::vector<Param*> Inliers;
 	int nTotalParams = EvaluateParams.size();
 	int nInliers = 0;
 
@@ -69,7 +71,7 @@ public:
     };
 
 		template<size_t i>
-		Param& GetModelParams() {
+		Param* GetModelParams() {
 			static_assert(i < ParamCount, "Line2DModel::GetModelParams<i>: i must be < ParamCount");
 
 			return m_parameters[i];
@@ -77,7 +79,7 @@ public:
 
 protected:
     // Model parameters
-		std::array<Param, ParamCount> m_parameters;
+		std::array<Param*, ParamCount> m_parameters;
     
 		// Parametric form
 		GRANSAC::VPFloat m_a, m_b, m_c; // ax + by + c = 0
@@ -87,11 +89,11 @@ protected:
     GRANSAC::VPFloat m_m; // Slope
     GRANSAC::VPFloat m_d; // Intercept
 
-    virtual GRANSAC::VPFloat ComputeDistanceMeasure(const Param& ExtPoint2D)
+    virtual GRANSAC::VPFloat ComputeDistanceMeasure(Param* ExtPoint2D)
     {
 	// Return distance between passed "point" and this line
 	// http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
-	GRANSAC::VPFloat Numer = fabs(m_a * ExtPoint2D.m_Point2D[0] + m_b * ExtPoint2D.m_Point2D[1] + m_c);
+	GRANSAC::VPFloat Numer = fabs(m_a * ExtPoint2D->m_Point2D[0] + m_b * ExtPoint2D->m_Point2D[1] + m_c);
 	GRANSAC::VPFloat Dist = Numer / m_DistDenominator;
 
 	// // Debug

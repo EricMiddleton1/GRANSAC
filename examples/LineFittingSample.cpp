@@ -70,20 +70,22 @@ int main(int argc, char * argv[])
 	auto& BestInliers = Estimator.GetBestInliers();
 	if (BestInliers.size() > 0)
 	{
-		for (auto& Inlier : BestInliers)
+		for (auto* Inlier : BestInliers)
 		{
-			cv::Point Pt(floor(Inlier.m_Point2D[0]), floor(Inlier.m_Point2D[1]));
+			cv::Point Pt(floor(Inlier->m_Point2D[0]), floor(Inlier->m_Point2D[1]));
 			cv::circle(Canvas, Pt, floor(Side / 100), cv::Scalar(0, 255, 0), -1);
 		}
 	}
 
 	auto& BestLine = Estimator.GetBestModel();
 	
-	auto& BestLinePt1 = BestLine.GetModelParams<0>();
-	auto& BestLinePt2 = BestLine.GetModelParams<1>();
+	auto BestLinePt1 = BestLine.GetModelParams<0>();
+	auto BestLinePt2 = BestLine.GetModelParams<1>();
 	
-	cv::Point Pt1(BestLinePt1.m_Point2D[0], BestLinePt1.m_Point2D[1]);
-	cv::Point Pt2(BestLinePt2.m_Point2D[0], BestLinePt2.m_Point2D[1]);
+	cv::Point Pt1(BestLinePt1->m_Point2D[0], BestLinePt1->m_Point2D[1]);
+	cv::Point Pt2(BestLinePt2->m_Point2D[0], BestLinePt2->m_Point2D[1]);
+	cv::circle(Canvas, Pt1, floor(Side / 100), cv::Scalar(255, 0, 0), -1);
+	cv::circle(Canvas, Pt2, floor(Side / 100), cv::Scalar(255, 0, 0), -1);
 	DrawFullLine(Canvas, Pt1, Pt2, cv::Scalar(0, 0, 255), 2);
 
 	while (true)
