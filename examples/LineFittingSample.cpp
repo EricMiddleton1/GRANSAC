@@ -50,47 +50,41 @@ int main(int argc, char * argv[])
 	int Perturb = 25;
 	std::normal_distribution<GRANSAC::VPFloat> PerturbDist(0, Perturb);
 
-	std::vector<std::shared_ptr<GRANSAC::AbstractParameter>> CandPoints;
+	std::vector<Point2D> CandPoints;
 	for (int i = 0; i < nPoints; ++i)
 	{
 		int Diag = UniDist(RNG);
 		cv::Point Pt(floor(Diag + PerturbDist(RNG)), floor(Diag + PerturbDist(RNG)));
 		cv::circle(Canvas, Pt, floor(Side / 100), cv::Scalar(0, 0, 0), -1);
 
-		std::shared_ptr<GRANSAC::AbstractParameter> CandPt = std::make_shared<Point2D>(Pt.x, Pt.y);
-		CandPoints.push_back(CandPt);
+		CandPoints.emplace_back(Pt.x, Pt.y);
 	}
 
-	GRANSAC::RANSAC<Line2DModel, 2> Estimator;
+	GRANSAC::RANSAC<Line2DModel> Estimator;
 	Estimator.Initialize(20, 100); // Threshold, iterations
 	int start = cv::getTickCount();
 	Estimator.Estimate(CandPoints);
 	int end = cv::getTickCount();
 	std::cout << "RANSAC took: " << GRANSAC::VPFloat(end - start) / GRANSAC::VPFloat(cv::getTickFrequency()) * 1000.0 << " ms." << std::endl;
 
-	auto BestInliers = Estimator.GetBestInliers();
+	auto& BestInliers = Estimator.GetBestInliers();
 	if (BestInliers.size() > 0)
 	{
 		for (auto& Inlier : BestInliers)
 		{
-			auto RPt = std::dynamic_pointer_cast<Point2D>(Inlier);
-			cv::Point Pt(floor(RPt->m_Point2D[0]), floor(RPt->m_Point2D[1]));
+			cv::Point Pt(floor(Inlier.m_Point2D[0]), floor(Inlier.m_Point2D[1]));
 			cv::circle(Canvas, Pt, floor(Side / 100), cv::Scalar(0, 255, 0), -1);
 		}
 	}
 
-	auto BestLine = Estimator.GetBestModel();
-	if (BestLine)
-	{
-		auto BestLinePt1 = std::dynamic_pointer_cast<Point2D>(BestLine->GetModelParams()[0]);
-		auto BestLinePt2 = std::dynamic_pointer_cast<Point2D>(BestLine->GetModelParams()[1]);
-		if (BestLinePt1 && BestLinePt2)
-		{
-			cv::Point Pt1(BestLinePt1->m_Point2D[0], BestLinePt1->m_Point2D[1]);
-			cv::Point Pt2(BestLinePt2->m_Point2D[0], BestLinePt2->m_Point2D[1]);
-			DrawFullLine(Canvas, Pt1, Pt2, cv::Scalar(0, 0, 255), 2);
-		}
-	}
+	auto& BestLine = Estimator.GetBestModel();
+	
+	auto& BestLinePt1 = BestLine.GetModelParams<0>();
+	auto& BestLinePt2 = BestLine.GetModelParams<1>();
+	
+	cv::Point Pt1(BestLinePt1.m_Point2D[0], BestLinePt1.m_Point2D[1]);
+	cv::Point Pt2(BestLinePt2.m_Point2D[0], BestLinePt2.m_Point2D[1]);
+	DrawFullLine(Canvas, Pt1, Pt2, cv::Scalar(0, 0, 255), 2);
 
 	while (true)
 	{
