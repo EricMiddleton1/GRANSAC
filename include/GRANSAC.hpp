@@ -24,7 +24,6 @@ namespace GRANSAC
 
 		int m_MaxIterations; // Number of iterations before termination
 		VPFloat m_Threshold; // The threshold for computing model consensus
-		VPFloat m_BestModelScore; // The score of the best model
 
 		std::vector<std::mt19937> m_RandEngines; // Mersenne twister high quality RNG that support *OpenMP* multi-threading
 
@@ -39,19 +38,9 @@ namespace GRANSAC
 				std::random_device SeedDevice;
 				m_RandEngines.push_back(std::mt19937(SeedDevice()));
 			}
-
-			Reset();
 		};
 
 		~RANSAC(void) {};
-
-		void Reset(void)
-		{
-			// Clear sampled models, etc. and prepare for next call. Reset RANSAC estimator state
-			m_SampledModels.clear();
-
-			m_BestModelScore = 0.0;
-		};
 
 		void Initialize(VPFloat Threshold, int MaxIterations = 1000)
 		{
@@ -75,8 +64,8 @@ namespace GRANSAC
 			int DataSize = m_params.size();
 			std::uniform_int_distribution<int> UniDist(0, int(DataSize - 1)); // Both inclusive
 
-			std::vector<VPFloat> InlierFractionAccum(m_MaxIterations);
 			std::vector<std::vector<typename T::Param*>> InliersAccum(m_MaxIterations);
+      std::vector<int> ScoreAccum(m_MaxIterations);
 			m_SampledModels.resize(m_MaxIterations);
 
 			//Precompute vector of param pointers
@@ -102,24 +91,16 @@ namespace GRANSAC
 				m_SampledModels[i] = T(RandomSamples);
 
 				// Check if the sampled model is the best so far
-				std::pair<VPFloat, std::vector<typename T::Param*>> EvalPair = m_SampledModels[i].Evaluate(RemainderSamples, m_Threshold);
-				InlierFractionAccum[i] = EvalPair.first;
-				InliersAccum[i] = EvalPair.second;
+				InliersAccum[i] = m_SampledModels[i].Evaluate(RemainderSamples, m_Threshold);
+        ScoreAccum[i] = InliersAccum[i].size();
 			}
 
-			for (int i = 0; i < m_MaxIterations; ++i)
-			{
-				if (InlierFractionAccum[i] > m_BestModelScore)
-				{
-					m_BestModelScore = InlierFractionAccum[i];
-					m_BestModel = &m_SampledModels[i];
-					m_BestInliers = InliersAccum[i];
-				}
-			}
+      int bestIndex = std::max_element(ScoreAccum.begin(), ScoreAccum.end()) - ScoreAccum.begin();
 
-			Reset();
-
-			return true;
+      m_BestModel = &m_SampledModels[bestIndex];
+      m_BestInliers = InliersAccum[bestIndex];
+			
+      return true;
 		};
 	};
 } // namespace GRANSAC

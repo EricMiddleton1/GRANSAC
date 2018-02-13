@@ -50,24 +50,19 @@ public:
 	m_DistDenominator = sqrt(m_a * m_a + m_b * m_b); // Cache square root for efficiency
     };
 
-    std::pair<GRANSAC::VPFloat, std::vector<Param*>> Evaluate(const std::vector<Param*> &EvaluateParams, GRANSAC::VPFloat Threshold)
+    std::vector<Param*> Evaluate(const std::vector<Param*> &EvaluateParams, GRANSAC::VPFloat Threshold)
     {
 	std::vector<Param*> Inliers;
-	int nTotalParams = EvaluateParams.size();
-	int nInliers = 0;
 
 	for(auto& p : EvaluateParams)
 	{
 	    if(ComputeDistanceMeasure(p) < Threshold)
 	    {
 		Inliers.push_back(p);
-		nInliers++;
 	    }
 	}
 
-	GRANSAC::VPFloat InlierFraction = GRANSAC::VPFloat(nInliers) / GRANSAC::VPFloat(nTotalParams); // This is the inlier fraction
-
-	return std::make_pair(InlierFraction, Inliers);
+  return Inliers;
     };
 
 		template<size_t i>
